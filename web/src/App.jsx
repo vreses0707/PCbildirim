@@ -374,10 +374,18 @@ export default function App() {
     const { data } = await supabase
       .from("products")
       .select("category, model, current_price");
+    const CANON = {
+      "RAM (Bellek)": "RAM",
+      "Bellek": "RAM",
+      "İşlemci (CPU)": "İşlemci",
+      "CPU": "İşlemci",
+      "Ekran Kartı (VGA)": "Ekran Kartı",
+      "VGA": "Ekran Kartı",
+    };
     const tree = {};
     for (const r of data || []) {
       if (!r.model) continue;
-      const cat = r.category || "Diğer";
+      const cat = CANON[r.category] || r.category || "Diğer";
       tree[cat] = tree[cat] || {};
       const e = tree[cat][r.model] || { count: 0, min: null };
       e.count += 1;
