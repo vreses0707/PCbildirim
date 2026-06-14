@@ -1,0 +1,37 @@
+name: Fiyat kontrolü
+
+# Her 20 dakikada bir + elle tetikleme. (Zamanlanmış işler birkaç dk gecikebilir;
+# repo 60 gün hareketsiz kalırsa GitHub cron'u durdurur — ara sıra elle çalıştır.)
+on:
+  schedule:
+    - cron: "*/20 * * * *"
+  workflow_dispatch: {}
+
+# Aynı anda iki tarama çakışmasın.
+concurrency:
+  group: price-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Bağımlılıkları kur
+        run: pip install -r worker/requirements.txt supabase
+
+      - name: Taramayı çalıştır
+        env:
+          STORE: supabase
+          NOTIFY: telegram
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: python -m worker.main

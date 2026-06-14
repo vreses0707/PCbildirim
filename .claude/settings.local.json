@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(python -m venv .venv)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m pip install --quiet --upgrade pip)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m pip install --quiet requests beautifulsoup4)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -c \"import requests, bs4; print\\('requests', requests.__version__, '| bs4', bs4.__version__\\)\")",
+      "PowerShell(\".venv haz�r\")",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m worker.sites.itopya)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m worker.sites.incehesap)"
+    ]
+  }
+}

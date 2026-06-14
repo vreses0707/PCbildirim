@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Yerel veritabanı (geliştirme)
+*.db
+*.sqlite
+*.sqlite3
+
+# Ortam değişkenleri / sırlar — ASLA commit etme
+.env
+*.local
+
+# İndirilen örnek HTML / debug
+debug_*.html
+*_sample.html
+
+# Web (Vite/React)
+web/node_modules/
+web/dist/
+web/.vercel/
+
+# OS
+.DS_Store
+Thumbs.db

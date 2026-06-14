@@ -1,0 +1,6 @@
+# Lokal geliştirme/test için yeterli (STORE=sqlite, NOTIFY=console):
+requests>=2.31
+beautifulsoup4>=4.12
+
+# Sadece bulut modunda gerekir (STORE=supabase). Lokal testte kurman gerekmez:
+# supabase>=2.4
