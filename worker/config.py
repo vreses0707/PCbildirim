@@ -32,12 +32,14 @@ TELEGRAM_CHAT_ID = _env("TELEGRAM_CHAT_ID")
 
 ITOPYA_CATEGORIES = [
     {"slug": "ekran-karti_k11", "category": "Ekran Kartı"},
+    {"slug": "gaming_k85", "category": "Gaming Bilgisayar"},
     {"slug": "oem-paketler", "category": "Hazır Sistem"},
     {"slug": "islemci_k8", "category": "İşlemci"},
     {"slug": "anakart_k9", "category": "Anakart"},
     {"slug": "rambellek_k10", "category": "RAM"},
     {"slug": "ssd_k22", "category": "SSD"},
-    {"slug": "cpu-sogutma_k13", "category": "Soğutma"},
+    {"slug": "islemci-sogutucular_k78", "category": "Soğutma"},
+    {"slug": "sivi-sogutma-parcalari_k81", "category": "Sıvı Soğutma"},
     {"slug": "kasa_k12", "category": "Kasa"},
     {"slug": "guc-kaynagi_k16", "category": "Güç Kaynağı"},
 ]
