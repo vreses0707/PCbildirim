@@ -17,6 +17,10 @@ MAX_PAGES = int(_env("MAX_PAGES", "15"))
 
 DEFAULT_DROP_THRESHOLD_PCT = float(_env("DEFAULT_DROP_THRESHOLD_PCT", "2.0"))
 
+# Sitelerin kampanya/fırsat sayfalarını otomatik bulup yeni giren ürünleri bildirir.
+CAMPAIGNS_ENABLED = _env("CAMPAIGNS", "1") not in ("0", "false", "False")
+MAX_CAMPAIGN_NOTIFS = int(_env("MAX_CAMPAIGN_NOTIFS", "30"))
+
 STORE_BACKEND = _env("STORE", "sqlite")
 SQLITE_PATH = _env("SQLITE_PATH", "pcbildirim.db")
 SUPABASE_URL = _env("SUPABASE_URL")

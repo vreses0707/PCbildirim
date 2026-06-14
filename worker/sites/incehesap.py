@@ -66,6 +66,23 @@ def _parse_page(html: str, category: str | None) -> list[Product]:
     return products
 
 
+def scrape_campaign(slug: str, name: str) -> list[Product]:
+    """Tek bir incehesap fırsat sayfasını tarar (normal ürün yapısını kullanır)."""
+    seen: dict[str, Product] = {}
+    for pg in range(1, MAX_PAGES + 1):
+        url = f"{BASE}/{slug}/" + (f"sayfa-{pg}/" if pg > 1 else "")
+        resp = get(url)
+        if resp.status_code != 200:
+            break
+        new = [p for p in _parse_page(resp.text, None) if p.url not in seen]
+        for p in new:
+            p.campaign = name
+            seen[p.url] = p
+        if not new:
+            break
+    return list(seen.values())
+
+
 def scrape(categories=None) -> list[Product]:
     categories = categories or INCEHESAP_CATEGORIES
     seen: dict[str, Product] = {}

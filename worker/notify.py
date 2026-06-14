@@ -1,6 +1,8 @@
 """Bildirim kanalları: console (dry-run) ve Telegram."""
 from __future__ import annotations
 
+import sys
+
 import requests
 
 from .config import REQUEST_TIMEOUT
@@ -19,14 +21,39 @@ def format_drop_message(ev: DropEvent, filter_label: str) -> str:
     )
 
 
+def format_campaign_message(p) -> str:
+    """Bir ürün kampanya/fırsat sayfasında belirince gönderilecek mesaj.
+    Eski fiyat varsa indirim yüzdesiyle birlikte gösterir."""
+    tag = p.campaign or "Kampanya"
+    old = getattr(p, "old_price", None)
+    if old and old > p.price:
+        pct = round((old - p.price) / old * 100)
+        price_line = f"{format_price(old)} → {format_price(p.price)} (-%{pct})"
+    else:
+        price_line = format_price(p.price)
+    return (
+        f"🔥 Fırsatta — {p.name}\n"
+        f"{price_line}\n"
+        f"🏬 {p.site}   🎯 {tag}\n"
+        f"{p.url}"
+    )
+
+
 class ConsoleNotifier:
     """Bildirimleri ekrana yazar — hesap/secret gerektirmez, lokal test için."""
 
     def send(self, text: str) -> bool:
-        print("\n┌─ BİLDİRİM ─────────────────────────")
+        def _p(s: str) -> None:
+            try:
+                print(s)
+            except UnicodeEncodeError:  # Windows konsolu emoji basamayabilir
+                enc = sys.stdout.encoding or "ascii"
+                print(s.encode(enc, "replace").decode(enc))
+
+        _p("\n+-- BILDIRIM -------------------------")
         for line in text.splitlines():
-            print("│ " + line)
-        print("└────────────────────────────────────")
+            _p("| " + line)
+        _p("+------------------------------------")
         return True
 
 

@@ -1,17 +1,86 @@
 """Orkestrasyon: scrape -> kaydet -> düşüş tespiti -> eşleştir -> bildir.
 
+İki bildirim yolu:
+  1) Fiyat düşüşü: normal kategorilerde, kullanıcı filtrelerine göre düşüş.
+  2) Kampanya: sitelerin fırsat/kampanya sayfalarına yeni giren ürünler.
+
 Çalıştırma:
     python -m worker.main          # bir kez tarar
 Ortam:
-    STORE=sqlite|supabase   NOTIFY=console|telegram
+    STORE=sqlite|supabase   NOTIFY=console|telegram   CAMPAIGNS=1|0
 """
 from __future__ import annotations
 
 from . import config
+from .campaigns import discover_incehesap, discover_itopya
 from .match import detect_drops, filter_matches
-from .notify import format_drop_message, get_notifier
-from .sites import SCRAPERS
+from .notify import format_campaign_message, format_drop_message, get_notifier
+from .sites import SCRAPERS, incehesap, itopya
 from .storage import get_store
+
+
+def _scrape_campaigns() -> list:
+    """Keşfedilen kampanya sayfalarını tarar; ürünleri (url'e göre tekil) döndürür.
+    itopya ve incehesap kampanya sayfaları farklı yapıda olduğu için her sitenin
+    kendi scrape_campaign'i kullanılır."""
+    found: dict[str, object] = {}
+    plan = [
+        ("itopya", itopya.scrape_campaign, discover_itopya()),
+        ("incehesap", incehesap.scrape_campaign, discover_incehesap()),
+    ]
+    for site, scrape_campaign, sources in plan:
+        for c in sources:
+            try:
+                prods = scrape_campaign(c["slug"], c["name"])
+            except Exception as exc:
+                print(f"[kampanya/{site}] {c['slug']} HATA: {exc}")
+                continue
+            for p in prods:
+                found.setdefault(p.url, p)
+            if prods:
+                print(f"[kampanya/{site}] {c['name']}: {len(prods)} ürün")
+    return list(found.values())
+
+
+def _run_campaigns(store, filters, notifier) -> int:
+    """Kampanya sayfalarına yeni giren ürünleri bildirir.
+    İlk taramada mevcut tüm fırsatları baz alır (sel olmaz), sonraki taramalarda
+    yalnızca YENİ girenleri bildirir."""
+    products = _scrape_campaigns()
+    print(f"[kampanya] toplam {len(products)} fırsat ürünü")
+    if not products:
+        return 0
+
+    seen = store.get_campaign_seen()
+    first_run = len(seen) == 0
+    new_items = [p for p in products if (p.url, p.campaign) not in seen]
+
+    if first_run:
+        store.save_campaign_products(products)
+        notifier.send(
+            f"🔥 Kampanya takibi başladı. Şu an {len(products)} fırsat ürünü izleniyor; "
+            f"bundan sonra fırsat sayfalarına YENİ girenleri bildireceğim."
+        )
+        print(f"[kampanya] ilk tarama — {len(products)} ürün baz alındı (bildirim yok)")
+        return 0
+
+    sent = 0
+    processed = []
+    for p in new_items:
+        if sent >= config.MAX_CAMPAIGN_NOTIFS:
+            break  # taşanlar sonraki taramaya kalsın (kaydetmiyoruz)
+        # Filtre varsa eşleşenleri bildir; hiç aktif filtre yoksa hepsini bildir.
+        if filters:
+            if not any(filter_matches(f, p) for f in filters):
+                processed.append(p)  # ilgilenilmiyor ama görüldü say
+                continue
+        if notifier.send(format_campaign_message(p)):
+            sent += 1
+        processed.append(p)
+
+    store.save_campaign_products(processed)
+    print(f"[kampanya] {len(new_items)} yeni ürün, {sent} bildirim gönderildi")
+    return sent
 
 
 def run() -> int:
@@ -56,6 +125,14 @@ def run() -> int:
                 sent += 1
 
     print(f"{sent} bildirim gönderildi")
+
+    # 2) Kampanya/fırsat sayfası takibi
+    if config.CAMPAIGNS_ENABLED:
+        try:
+            sent += _run_campaigns(store, filters, notifier)
+        except Exception as exc:
+            print(f"[kampanya] HATA: {exc}")
+
     return sent
 
 

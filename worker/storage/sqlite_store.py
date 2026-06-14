@@ -55,6 +55,15 @@ CREATE TABLE IF NOT EXISTS settings (
     telegram_chat_id TEXT
 );
 INSERT OR IGNORE INTO settings (id, telegram_chat_id) VALUES (1, NULL);
+CREATE TABLE IF NOT EXISTS campaign_products (
+    url           TEXT,
+    site          TEXT,
+    name          TEXT,
+    campaign      TEXT,
+    price         REAL,
+    first_seen_at REAL,
+    PRIMARY KEY (url, campaign)
+);
 """
 
 
@@ -145,3 +154,23 @@ class SqliteStore:
     def get_settings(self) -> dict:
         row = self.conn.execute("SELECT telegram_chat_id FROM settings WHERE id=1").fetchone()
         return {"telegram_chat_id": row["telegram_chat_id"] if row else None}
+
+    # --- kampanya ürünleri ---
+    def get_campaign_seen(self) -> set:
+        rows = self.conn.execute("SELECT url, campaign FROM campaign_products").fetchall()
+        return {(r["url"], r["campaign"]) for r in rows}
+
+    def save_campaign_products(self, products) -> None:
+        now = time.time()
+        cur = self.conn.cursor()
+        for p in products:
+            cur.execute(
+                """
+                INSERT INTO campaign_products (url, site, name, campaign, price, first_seen_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(url, campaign) DO UPDATE SET
+                    name=excluded.name, price=excluded.price
+                """,
+                (p.url, p.site, p.name, p.campaign, p.price, now),
+            )
+        self.conn.commit()

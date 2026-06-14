@@ -13,6 +13,8 @@ venv/
 # Ortam değişkenleri / sırlar — ASLA commit etme
 .env
 *.local
+run_worker.bat
+bilgiler.txt
 
 # İndirilen örnek HTML / debug
 debug_*.html

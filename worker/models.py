@@ -14,6 +14,8 @@ class Product:
     brand: str | None = None
     model: str | None = None   # örn. "RTX 5070 Ti" (öneri kataloğu için)
     image: str | None = None
+    campaign: str | None = None  # bir kampanya/fırsat sayfasında bulunduysa kampanya adı
+    old_price: float | None = None  # kampanyada üstü çizili eski fiyat (varsa)
 
 
 @dataclass

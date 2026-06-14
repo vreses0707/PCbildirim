@@ -3,5 +3,4 @@ requests>=2.31
 beautifulsoup4>=4.12
 cloudscraper>=1.2.71
 
-# Sadece bulut modunda gerekir (STORE=supabase). Lokal testte kurman gerekmez:
-# supabase>=2.4
+supabase>=2.4

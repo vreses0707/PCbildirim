@@ -117,3 +117,28 @@ class SupabaseStore:
         if res.data:
             return {"telegram_chat_id": res.data[0].get("telegram_chat_id")}
         return {"telegram_chat_id": None}
+
+    # --- kampanya ürünleri ---
+    def get_campaign_seen(self) -> set:
+        res = self.client.table("campaign_products").select("url, campaign").execute()
+        return {(r["url"], r.get("campaign")) for r in (res.data or [])}
+
+    def save_campaign_products(self, products) -> None:
+        if not products:
+            return
+        now = _now_iso()
+        rows = [
+            {
+                "url": p.url,
+                "site": p.site,
+                "name": p.name,
+                "campaign": p.campaign,
+                "price": p.price,
+                "first_seen_at": now,
+            }
+            for p in products
+        ]
+        for i in range(0, len(rows), 500):
+            self.client.table("campaign_products").upsert(
+                rows[i : i + 500], on_conflict="url,campaign"
+            ).execute()

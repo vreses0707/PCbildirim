@@ -54,6 +54,58 @@ def _parse_page(html: str, category: str | None) -> list[Product]:
     return products
 
 
+def _parse_campaign_page(html: str, campaign_name: str) -> list[Product]:
+    """itopya kampanya/fırsat sayfaları farklı yapıdadır: <a class="ss-card"> kartlar,
+    ad `.ss-product-description`, fiyatlar `.old-price` / `.new-price`."""
+    soup = BeautifulSoup(html, "html.parser")
+    products: list[Product] = []
+    for card in soup.select("a.ss-card"):
+        url = _abs_url(card.get("href", ""))
+        desc = card.select_one(".ss-product-description")
+        title = card.select_one(".ss-product-title")
+        name = (desc.get_text(strip=True) if desc else "") or (
+            title.get_text(strip=True) if title else ""
+        )
+        new_el = card.select_one(".new-price")
+        old_el = card.select_one(".old-price")
+        price = parse_turkish_price(new_el.get_text()) if new_el else None
+        old = parse_turkish_price(old_el.get_text()) if old_el else None
+        if old is not None and price is not None and old <= price:
+            old = None  # bazı kartlarda eski fiyat JS ile gelir; placeholder'ı yok say
+        if not name or not url or price is None:
+            continue
+        brand = name.split()[0] if name.split() else None
+        products.append(
+            Product(
+                url=url,
+                site=SITE,
+                name=name,
+                price=price,
+                brand=brand,
+                model=extract_model(name),
+                campaign=campaign_name,
+                old_price=old,
+            )
+        )
+    return products
+
+
+def scrape_campaign(slug: str, name: str) -> list[Product]:
+    """Tek bir itopya kampanya sayfasını (gerekirse sayfalama ile) tarar."""
+    seen: dict[str, Product] = {}
+    for pg in range(1, MAX_PAGES + 1):
+        url = f"{BASE}/{slug}" + (f"?pg={pg}" if pg > 1 else "")
+        resp = get(url)
+        if resp.status_code != 200:
+            break
+        new = [p for p in _parse_campaign_page(resp.text, name) if p.url not in seen]
+        for p in new:
+            seen[p.url] = p
+        if not new:
+            break
+    return list(seen.values())
+
+
 def scrape(categories=None) -> list[Product]:
     categories = categories or ITOPYA_CATEGORIES
     seen: dict[str, Product] = {}

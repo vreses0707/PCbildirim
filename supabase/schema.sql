@@ -56,6 +56,18 @@ create table if not exists settings (
 insert into settings (id, telegram_chat_id) values (1, null)
     on conflict (id) do nothing;
 
+-- Kampanya/fırsat sayfalarında görülen ürünler. (url, campaign) çifti tekildir;
+-- bir ürün bir kampanyaya YENİ girdiğinde worker bildirim atar (tekrar atmaz).
+create table if not exists campaign_products (
+    url           text,
+    site          text,
+    name          text,
+    campaign      text,
+    price         numeric,
+    first_seen_at timestamptz default now(),
+    primary key (url, campaign)
+);
+
 -- =================== ÖNERİ KATALOĞU (web için) ===================
 -- Web arayüzünün model/marka önerilerini hızlı çekmesi için görünüm.
 create or replace view catalog_models as
@@ -71,16 +83,18 @@ create or replace view catalog_models as
 -- NOT: anon key herkese açıktır. Web tarafına basit bir parola kapısı koymanı öneririz.
 -- Daha güçlü güvenlik için Supabase Auth'u açıp politikaları auth.uid() ile sınırla.
 
-alter table products      enable row level security;
-alter table price_history enable row level security;
-alter table filters       enable row level security;
-alter table alerts        enable row level security;
-alter table settings      enable row level security;
+alter table products          enable row level security;
+alter table price_history     enable row level security;
+alter table filters           enable row level security;
+alter table alerts            enable row level security;
+alter table settings          enable row level security;
+alter table campaign_products enable row level security;
 
 -- Salt okunur tablolar (anon select)
-create policy "read products"      on products      for select using (true);
-create policy "read price_history" on price_history for select using (true);
-create policy "read alerts"        on alerts        for select using (true);
+create policy "read products"          on products          for select using (true);
+create policy "read price_history"     on price_history     for select using (true);
+create policy "read alerts"            on alerts            for select using (true);
+create policy "read campaign_products" on campaign_products for select using (true);
 
 -- Filtreler: anon tam yönetim (oku/ekle/güncelle/sil)
 create policy "manage filters select" on filters for select using (true);

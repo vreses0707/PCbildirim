@@ -26,3 +26,11 @@ class Store(Protocol):
 
     def get_settings(self) -> dict:
         ...
+
+    def get_campaign_seen(self) -> set:
+        """Daha önce bir kampanya sayfasında görülen (url, kampanya_adı) çiftleri."""
+        ...
+
+    def save_campaign_products(self, products: list[Product]) -> None:
+        """Kampanya sayfalarında bulunan ürünleri (url, kampanya) anahtarıyla kaydeder."""
+        ...
