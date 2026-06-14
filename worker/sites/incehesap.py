@@ -76,6 +76,7 @@ def scrape(categories=None) -> list[Product]:
             url = f"{BASE}/{slug}/" + (f"sayfa-{pg}/" if pg > 1 else "")
             resp = get(url)
             if resp.status_code != 200:
+                print(f"[incehesap] {url} -> HTTP {resp.status_code}")
                 break
             page_products = _parse_page(resp.text, cname)
             new = [p for p in page_products if p.url not in seen]
