@@ -55,31 +55,30 @@ def _run_campaigns(store, filters, notifier) -> int:
     first_run = len(seen) == 0
     new_items = [p for p in products if (p.url, p.campaign) not in seen]
 
-    if first_run:
-        store.save_campaign_products(products)
-        notifier.send(
-            f"🔥 Kampanya takibi başladı. Şu an {len(products)} fırsat ürünü izleniyor; "
-            f"bundan sonra fırsat sayfalarına YENİ girenleri bildireceğim."
-        )
-        print(f"[kampanya] ilk tarama — {len(products)} ürün baz alındı (bildirim yok)")
-        return 0
-
     sent = 0
     processed = []
     for p in new_items:
         if sent >= config.MAX_CAMPAIGN_NOTIFS:
             break  # taşanlar sonraki taramaya kalsın (kaydetmiyoruz)
-        # Filtre varsa eşleşenleri bildir; hiç aktif filtre yoksa hepsini bildir.
-        if filters:
-            if not any(filter_matches(f, p) for f in filters):
-                processed.append(p)  # ilgilenilmiyor ama görüldü say
-                continue
-        if notifier.send(format_campaign_message(p)):
+        # Eşleşme: aktif filtre varsa filtreye uyanları, hiç filtre yoksa hepsini.
+        wants = (not filters) or any(filter_matches(f, p) for f in filters)
+        # İlk taramada filtre YOKKEN hepsini bildirmek sel yaratır → sessiz baz al.
+        # Ama filtreyle eşleşen MEVCUT fırsatları ilk taramada da bildir.
+        if first_run and not filters:
+            wants = False
+        if wants and notifier.send(format_campaign_message(p)):
             sent += 1
         processed.append(p)
 
     store.save_campaign_products(processed)
-    print(f"[kampanya] {len(new_items)} yeni ürün, {sent} bildirim gönderildi")
+    if first_run:
+        notifier.send(
+            f"🔥 Kampanya takibi başladı. {len(products)} fırsat ürünü izleniyor; "
+            f"bundan sonra fırsat sayfalarına yeni gireni hemen bildireceğim."
+        )
+        print(f"[kampanya] ilk tarama — {len(products)} ürün baz alındı, {sent} bildirim")
+    else:
+        print(f"[kampanya] {len(new_items)} yeni ürün, {sent} bildirim gönderildi")
     return sent
 
 
