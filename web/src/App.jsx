@@ -47,20 +47,37 @@ function Gate({ children }) {
 }
 
 // ----------------------------- Filtre formu -----------------------------
-function FilterForm({ models, onAdded }) {
+function FilterForm({ catalog, onAdded }) {
   const empty = {
+    category: "",
     model: "",
     keywords: "",
     exclude_keywords: "",
     sites: [],
     max_price: "",
-    drop_threshold_pct: 2,
+    drop_threshold_pct: 0,
   };
   const [f, setF] = useState(empty);
+  const [adv, setAdv] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // Seçili kategorinin modelleri; kategori "Tümü" ise tüm modeller birleştirilir.
+  const modelList = useMemo(() => {
+    if (f.category) return catalog.byCategory[f.category] || [];
+    const merged = {};
+    for (const arr of Object.values(catalog.byCategory)) {
+      for (const m of arr) {
+        const e = merged[m.model] || { model: m.model, count: 0, min: null };
+        e.count += m.count;
+        if (m.min != null && (e.min == null || m.min < e.min)) e.min = m.min;
+        merged[m.model] = e;
+      }
+    }
+    return Object.values(merged).sort((a, b) => b.count - a.count);
+  }, [f.category, catalog]);
+
   const label = useMemo(() => {
-    const parts = [f.model || splitCsv(f.keywords).join(" ")].filter(Boolean);
+    const parts = [f.model || splitCsv(f.keywords).join(" ") || f.category].filter(Boolean);
     if (f.max_price) parts.push(`< ${tl(f.max_price)}`);
     return parts.join("  ") || "Yeni filtre";
   }, [f]);
@@ -74,13 +91,16 @@ function FilterForm({ models, onAdded }) {
 
   async function submit(e) {
     e.preventDefault();
-    if (!f.model && !splitCsv(f.keywords).length) {
-      alert("En az bir model seç ya da anahtar kelime gir.");
+    if (!f.model && !splitCsv(f.keywords).length && !f.category) {
+      alert("Bir kategori + model seç ya da anahtar kelime gir.");
       return;
     }
     setBusy(true);
     const row = {
       label,
+      // Model seçildiyse tam eşleşme; kategori sadece listeyi daraltmak için (gezinme).
+      // Model yok ama kategori seçiliyse kategoriyi filtreye koy.
+      category: !f.model && f.category ? f.category : null,
       model: f.model || null,
       keywords: splitCsv(f.keywords),
       exclude_keywords: splitCsv(f.exclude_keywords),
@@ -100,67 +120,91 @@ function FilterForm({ models, onAdded }) {
     <form className="card" onSubmit={submit}>
       <h2>➕ Yeni takip filtresi</h2>
 
-      <label>Model (öneri listesinden)</label>
+      <label>1) Kategori</label>
+      <select
+        value={f.category}
+        onChange={(e) => setF({ ...f, category: e.target.value, model: "" })}
+      >
+        <option value="">— Tümü —</option>
+        {catalog.categories.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </select>
+
+      <label>2) Model / ürün</label>
       <select value={f.model} onChange={(e) => setF({ ...f, model: e.target.value })}>
-        <option value="">— Model seçme (anahtar kelime kullan) —</option>
-        {models.map((m) => (
+        <option value="">
+          {f.category ? "— Bu kategoride model seç —" : "— Önce model seç —"}
+        </option>
+        {modelList.map((m) => (
           <option key={m.model} value={m.model}>
-            {m.model} · {m.product_count} ürün · en ucuz {tl(m.min_price)}
+            {m.model} · {m.count} ürün · en ucuz {tl(m.min)}
           </option>
         ))}
       </select>
       <p className="hint">
-        Model seçersen tam eşleşir: "RTX 5070" seçince "RTX 5070 Ti" gelmez.
+        Listeden seçtiğin için yazım hatası olmaz. Model tam eşleşir: "RTX 5070" seçersen
+        "RTX 5070 Ti" gelmez; o GPU'lu hazır sistemler de yakalanır.
       </p>
 
-      <label>Anahtar kelimeler (virgülle) — opsiyonel</label>
-      <input
-        placeholder="örn: white, ASUS"
-        value={f.keywords}
-        onChange={(e) => setF({ ...f, keywords: e.target.value })}
-      />
+      <button type="button" className="link-btn" onClick={() => setAdv(!adv)}>
+        {adv ? "▾ Gelişmiş ayarları gizle" : "▸ Gelişmiş (anahtar kelime, fiyat sınırı…)"}
+      </button>
 
-      <label>Hariç tutulacaklar (virgülle) — opsiyonel</label>
-      <input
-        placeholder="örn: ti, oem"
-        value={f.exclude_keywords}
-        onChange={(e) => setF({ ...f, exclude_keywords: e.target.value })}
-      />
-
-      <div className="row">
-        <div>
-          <label>Maks. fiyat (TL) — opsiyonel</label>
+      {adv && (
+        <>
+          <label>Anahtar kelimeler (virgülle) — opsiyonel</label>
           <input
-            type="number"
-            placeholder="örn: 40000"
-            value={f.max_price}
-            onChange={(e) => setF({ ...f, max_price: e.target.value })}
+            placeholder="örn: white, ASUS"
+            value={f.keywords}
+            onChange={(e) => setF({ ...f, keywords: e.target.value })}
           />
-        </div>
-        <div>
-          <label>Düşüş eşiği (%)</label>
-          <input
-            type="number"
-            step="0.5"
-            value={f.drop_threshold_pct}
-            onChange={(e) => setF({ ...f, drop_threshold_pct: e.target.value })}
-          />
-        </div>
-      </div>
 
-      <label>Siteler (boş = ikisi de)</label>
-      <div className="chips">
-        {SITES.map((s) => (
-          <button
-            type="button"
-            key={s}
-            className={"chip" + (f.sites.includes(s) ? " on" : "")}
-            onClick={() => toggleSite(s)}
-          >
-            {s}
-          </button>
-        ))}
-      </div>
+          <label>Hariç tutulacaklar (virgülle) — opsiyonel</label>
+          <input
+            placeholder="örn: ti, oem"
+            value={f.exclude_keywords}
+            onChange={(e) => setF({ ...f, exclude_keywords: e.target.value })}
+          />
+
+          <div className="row">
+            <div>
+              <label>Maks. fiyat (TL)</label>
+              <input
+                type="number"
+                placeholder="örn: 40000"
+                value={f.max_price}
+                onChange={(e) => setF({ ...f, max_price: e.target.value })}
+              />
+            </div>
+            <div>
+              <label>Düşüş eşiği (%)</label>
+              <input
+                type="number"
+                step="0.5"
+                value={f.drop_threshold_pct}
+                onChange={(e) => setF({ ...f, drop_threshold_pct: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <label>Siteler (boş = ikisi de)</label>
+          <div className="chips">
+            {SITES.map((s) => (
+              <button
+                type="button"
+                key={s}
+                className={"chip" + (f.sites.includes(s) ? " on" : "")}
+                onClick={() => toggleSite(s)}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       <button type="submit" disabled={busy} className="primary">
         {busy ? "Ekleniyor…" : `Ekle:  ${label}`}
@@ -316,7 +360,7 @@ function Settings() {
 // --------------------------------- App ---------------------------------
 export default function App() {
   const [filters, setFilters] = useState([]);
-  const [models, setModels] = useState([]);
+  const [catalog, setCatalog] = useState({ categories: [], byCategory: {} });
 
   async function reload() {
     const { data } = await supabase
@@ -325,18 +369,36 @@ export default function App() {
       .order("created_at", { ascending: false });
     setFilters(data || []);
   }
-  async function loadModels() {
+  // Kategori -> model ağacını doğrudan ürünlerden kur (autocomplete/öneri için).
+  async function loadCatalog() {
     const { data } = await supabase
-      .from("catalog_models")
-      .select("*")
-      .order("product_count", { ascending: false });
-    setModels(data || []);
+      .from("products")
+      .select("category, model, current_price");
+    const tree = {};
+    for (const r of data || []) {
+      if (!r.model) continue;
+      const cat = r.category || "Diğer";
+      tree[cat] = tree[cat] || {};
+      const e = tree[cat][r.model] || { count: 0, min: null };
+      e.count += 1;
+      if (r.current_price != null && (e.min == null || r.current_price < e.min))
+        e.min = r.current_price;
+      tree[cat][r.model] = e;
+    }
+    const categories = Object.keys(tree).sort();
+    const byCategory = {};
+    for (const cat of categories) {
+      byCategory[cat] = Object.entries(tree[cat])
+        .map(([model, v]) => ({ model, count: v.count, min: v.min }))
+        .sort((a, b) => b.count - a.count);
+    }
+    setCatalog({ categories, byCategory });
   }
 
   useEffect(() => {
     if (isConfigured) {
       reload();
-      loadModels();
+      loadCatalog();
     }
   }, []);
 
@@ -363,7 +425,7 @@ export default function App() {
         </header>
         <div className="grid">
           <div>
-            <FilterForm models={models} onAdded={reload} />
+            <FilterForm catalog={catalog} onAdded={reload} />
             <Settings />
           </div>
           <div>

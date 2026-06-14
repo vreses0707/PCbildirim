@@ -99,3 +99,8 @@ button:disabled { opacity: .6; cursor: default; }
 
 .center { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
 .save-btn { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 600; white-space: nowrap; }
+.link-btn {
+  background: none; border: none; color: var(--muted); padding: 10px 0 2px;
+  font-size: 13px; cursor: pointer; width: 100%; text-align: left;
+}
+.link-btn:hover { color: var(--accent); border: none; }

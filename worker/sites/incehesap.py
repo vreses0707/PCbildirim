@@ -51,15 +51,16 @@ def _parse_page(html: str, category: str | None) -> list[Product]:
             except (TypeError, ValueError):
                 pass
 
+        cat = data.get("category") or category
         products.append(
             Product(
                 url=_abs_url(a.get("href", "")),
                 site=SITE,
                 name=name,
                 price=price,
-                category=data.get("category") or category,
+                category=cat,
                 brand=data.get("brand"),
-                model=extract_model(name),
+                model=extract_model(name, cat),
                 image=image,
             )
         )

@@ -14,6 +14,7 @@ venv/
 .env
 *.local
 run_worker.bat
+run_hidden.vbs
 bilgiler.txt
 
 # İndirilen örnek HTML / debug

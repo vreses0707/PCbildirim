@@ -48,7 +48,7 @@ def _parse_page(html: str, category: str | None) -> list[Product]:
                 price=price,
                 category=category,
                 brand=brand,
-                model=extract_model(name),
+                model=extract_model(name, category),
             )
         )
     return products
