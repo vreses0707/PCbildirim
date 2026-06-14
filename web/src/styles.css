@@ -54,9 +54,9 @@ input, select {
 input:focus, select:focus { outline: none; border-color: var(--accent); }
 .hint { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
 
-.row { display: flex; gap: 12px; }
-.row > div { flex: 1; }
-.row > input { flex: 1; }
+.row { display: flex; gap: 12px; align-items: flex-end; }
+.row > div { flex: 1; min-width: 0; }
+.row > input { flex: 1; min-width: 0; }
 .row > button { flex: 0 0 auto; }
 
 button {
@@ -98,3 +98,4 @@ button:disabled { opacity: .6; cursor: default; }
 .matches .site { color: var(--muted); white-space: nowrap; }
 
 .center { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+.save-btn { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 600; white-space: nowrap; }
