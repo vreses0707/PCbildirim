@@ -305,7 +305,7 @@ function Settings() {
           value={chatId}
           onChange={(e) => setChatId(e.target.value)}
         />
-        <button className="primary" onClick={save}>
+        <button className="save-btn" onClick={save}>
           {saved ? "Kaydedildi ✓" : "Kaydet"}
         </button>
       </div>
